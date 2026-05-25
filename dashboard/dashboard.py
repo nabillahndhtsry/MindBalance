@@ -1,4 +1,3 @@
-import streamlit as plt
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -6,13 +5,16 @@ import seaborn as sns
 import pickle
 import numpy as np
 import tensorflow as tf
+import os
 
+# Mengambil path folder tempat script ini dijalankan agar aman di server Linux
+current_dir = os.path.dirname(os.path.realpath(__file__))
 
 # LOAD MODEL TENSORFLOW (AI)
-@st.cache_resource # Menggunakan cache agar model tidak di-load berulang kali setiap web di-refresh
+@st.cache_resource 
 def load_ai_model():
-    # Pastikan nama file sesuai dengan file .keras milik tim Anda
-    return tf.keras.models.load_model("mindbalance_model_new.keras")
+    model_path = os.path.join(current_dir, "mindbalance_model_new.keras")
+    return tf.keras.models.load_model(model_path)
 
 try:
     model = load_ai_model()
@@ -37,15 +39,14 @@ st.markdown("---")
 # 2. LOAD DATASET (Untuk Keperluan EDA)
 @st.cache_data
 def load_data():
-    # Pastikan file dataset Anda berada di folder yang sama atau sesuaikan path-nya
-    df = pd.read_csv("cleaned_anxiety_data.csv") 
+    csv_path = os.path.join(current_dir, "cleaned_anxiety_data.csv")
+    df = pd.read_csv(csv_path) 
     return df
 
 try:
     df = load_data()
 except:
     st.warning("Dataset 'cleaned_anxiety_data.csv' tidak ditemukan. Menu EDA interaktif akan menggunakan placeholder data.")
-    # Dummy data jika file csv belum di-upload ke server streamlit
     df = pd.DataFrame({
         'Anxiety_Category': ['Low', 'Medium', 'High', 'Low', 'High', 'Medium'],
         'Sleep_Duration': [7.5, 6.0, 5.0, 8.0, 4.5, 6.5],
@@ -64,7 +65,6 @@ if menu == "📊 Interactive EDA":
     st.header("Exploratory Data Analysis (EDA) Interaktif")
     st.write("Analisis hubungan antara gaya hidup, kondisi fisik, dan tingkat kecemasan pengguna.")
 
-    # Filter Interaktif berdasarkan Tingkat Kecemasan
     selected_anxiety = st.multiselect(
         "Filter berdasarkan Tingkat Kecemasan:",
         options=df['Anxiety_Category'].unique(),
@@ -72,7 +72,6 @@ if menu == "📊 Interactive EDA":
     )
     filtered_df = df[df['Anxiety_Category'].isin(selected_anxiety)]
 
-    # Layout Kolom untuk Grafik
     col1, col2 = st.columns(2)
 
     with col1:
@@ -105,24 +104,21 @@ elif menu == "🔮 Anxiety Detection (Inference UI)":
     st.header("Form Deteksi Dini Tingkat Kecemasan")
     st.write("Masukkan indikator profil klinis dan kebiasaan harian Anda untuk dianalisis oleh AI.")
 
-    # Membuka Form di Streamlit
     with st.form("prediction_form"):
         col1, col2 = st.columns(2)
 
-        # --- KOLOM 1: DEFINISI VARIABEL INPUT DEMOGRAFI & GAYA HIDUP ---
         with col1:
             st.markdown("### 👤 Profil Demografi & Kebiasaan")
             age = st.number_input("Umur Anda:", min_value=18, max_value=100, value=25)
             gender = st.selectbox("Jenis Kelamin:", ["Male", "Female", "Other"])
             occupation = st.selectbox("Pekerjaan:", ['Artist', 'Athlete', 'Chef', 'Doctor', 'Engineer', 'Freelancer', 'Lawyer', 'Musician', 'Nurse', 'Other', 'Scientist', 'Student', 'Teacher'])
-            sleep_hours = st.slider("Durasi Tidur Harian (Jam):", 2.3, 11.3, 7.0, 0.1) # <--- Variabel sleep_hours didefinisikan di sini
+            sleep_hours = st.slider("Durasi Tidur Harian (Jam):", 2.3, 11.3, 7.0, 0.1)
             physical_activity = st.slider("Aktivitas Fisik (Jam/Minggu):", 0.0, 10.1, 3.0, 0.1)
             caffeine = st.number_input("Konsumsi Kafein Harian (mg):", min_value=0, max_value=599, value=150)
             alcohol = st.number_input("Konsumsi Alkohol (Gelas/Minggu):", min_value=0, max_value=19, value=2)
             smoking = st.selectbox("Apakah Anda Merokok?", ["Yes", "No"])
             diet_quality = st.slider("Kualitas Pola Makan (Skala 1-10):", 1, 10, 7)
 
-        # --- KOLOM 2: DEFINISI VARIABEL INPUT PARAMETER FISIK & MEDIS ---
         with col2:
             st.markdown("### 🫀 Parameter Fisik & Medis")
             stress_level = st.slider("Tingkat Stres Psikologis (Skala 1-10):", 1, 10, 5)
@@ -135,15 +131,12 @@ elif menu == "🔮 Anxiety Detection (Inference UI)":
             family_history = st.selectbox("Ada Riwayat Kecemasan di Keluarga?", ["Yes", "No"])
             recent_life_event = st.selectbox("Ada Kejadian Besar/Trauma 6 Bulan Terakhir?", ["Yes", "No"])
 
-        # Tombol submit untuk memicu proses pembacaan data dan prediksi
         submit_button = st.form_submit_button(label="Mulai Deteksi AI")
 
-    # Jalankan perhitungan HANYA ketika tombol ditekan dan seluruh variabel di atas sudah terisi
     if submit_button:
         st.markdown("---")
         st.subheader("📋 Hasil Analisis")
 
-        # 1. PROSES FEATURE ENGINEERING (Sekarang aman karena semua variabel input sudah terdefinisi di atas)
         sleep_norm = (sleep_hours - 2.3) / (11.3 - 2.3)
         caffeine_norm = caffeine / 599.0
         sleep_efficiency = round((sleep_norm * 0.7 + (1 - caffeine_norm) * 0.3), 4)
@@ -169,13 +162,11 @@ elif menu == "🔮 Anxiety Detection (Inference UI)":
             sweat_norm * 0.15 + binary_map[family_history] * 0.15
         ), 4)
 
-        # 2. PROSES PREDIKSI MODEL AI TENSORFLOW
         if model_loaded:
             gender_map = {"Male": 0, "Female": 1, "Other": 2}
             occ_list = ['Artist', 'Athlete', 'Chef', 'Doctor', 'Engineer', 'Freelancer', 'Lawyer', 'Musician', 'Nurse', 'Other', 'Scientist', 'Student', 'Teacher']
             occ_map = {occ: i for i, occ in enumerate(occ_list)}
 
-            # Menggabungkan 21 komponen variabel menjadi matriks siap prediksi
             input_vector = np.array([[
                 age, gender_map[gender], occ_map[occupation],
                 sleep_hours, physical_activity, caffeine,
@@ -193,7 +184,6 @@ elif menu == "🔮 Anxiety Detection (Inference UI)":
             labels = ["Low (Rendah)", "Medium (Sedang)", "High (Tinggi)"]
             anxiety_result = labels[predicted_class_idx]
         else:
-            # Mode Cadangan (Simulasi Cerdas) jika file .keras tidak ada di folder
             if anxiety_composite > 0.5 or stress_level >= 8:
                 predicted_class_idx = 2
                 anxiety_result = "High (Tinggi)"
@@ -204,7 +194,6 @@ elif menu == "🔮 Anxiety Detection (Inference UI)":
                 predicted_class_idx = 0
                 anxiety_result = "Low (Rendah)"
 
-        # 3. MENAMPILKAN HASILNYA KE LAYAR DASHBOARD
         if predicted_class_idx == 2:
             st.error(f"**Hasil Analisis Tingkat Kecemasan: {anxiety_result}**")
             st.info("**Rekomendasi Coping:** Ambil waktu jeda istirahat, batasi asupan kopi/kafein harian, lakukan teknik *box breathing*, dan sangat disarankan untuk berdiskusi dengan psikolog atau tenaga profesional.")
@@ -215,7 +204,6 @@ elif menu == "🔮 Anxiety Detection (Inference UI)":
             st.success(f"**Hasil Analisis Tingkat Kecemasan: {anxiety_result}**")
             st.info("**Rekomendasi Coping:** Tingkat kecemasan Anda sangat baik dan stabil. Pertahankan kombinasi pola hidup dan manajemen stres yang sudah Anda miliki saat ini.")
 
-        # Tampilkan Nilai Skor Tambahan di Dashboard hasil kalkulasi Feature Engineering
         st.markdown("### Skor Indikator Gabungan (Feature Engineering):")
         m1, m2, m3 = st.columns(3)
         m1.metric("Sleep Efficiency Score", f"{sleep_efficiency:.4f}")
