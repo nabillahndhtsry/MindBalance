@@ -1,6 +1,6 @@
-pandas 
+streamlit
+pandas
 matplotlib
 seaborn
-pickle
 numpy
 tensorflow
