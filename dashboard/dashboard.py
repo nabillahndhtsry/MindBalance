@@ -7,6 +7,11 @@ import seaborn as sns
 import streamlit as st
 import tensorflow as tf
 
+try:
+    import keras
+except ImportError:
+    keras = None
+
 # Mengambil path folder tempat script ini dijalankan agar aman di server Linux
 st.set_page_config(page_title="MindBalance - Anxiety Detection Dashboard", page_icon="🧠", layout="wide")
 current_dir = os.path.dirname(os.path.realpath(__file__))
@@ -18,7 +23,8 @@ data_path = os.path.join(current_dir, "cleaned_anxiety_data.csv")
 def load_ai_model():
     if not os.path.exists(model_path):
         raise FileNotFoundError(f"File model tidak ditemukan di: {model_path}")
-    return tf.keras.models.load_model(model_path, compile=False)
+    loader = keras.models if keras is not None else tf.keras.models
+    return loader.load_model(model_path, compile=False)
 
 # Menginisialisasi model
 model = None
