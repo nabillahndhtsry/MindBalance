@@ -9,8 +9,28 @@ import tensorflow as tf
 
 try:
     import keras
+    from keras.layers import Dense as KerasDense
+    from keras.utils import register_keras_serializable
 except ImportError:
     keras = None
+    KerasDense = None
+    register_keras_serializable = None
+
+# Kustom Dense untuk menerima quantization_config saat model lama diserialisasi
+custom_objects = {}
+if KerasDense is not None and register_keras_serializable is not None:
+    @register_keras_serializable(package='keras.layers', name='Dense')
+    class DenseWithQuantization(KerasDense):
+        def __init__(self, *args, quantization_config=None, **kwargs):
+            super().__init__(*args, **kwargs)
+            self.quantization_config = quantization_config
+
+        def get_config(self):
+            config = super().get_config()
+            config.pop('quantization_config', None)
+            return config
+
+    custom_objects['Dense'] = DenseWithQuantization
 
 # Mengambil path folder tempat script ini dijalankan agar aman di server Linux
 st.set_page_config(page_title="MindBalance - Anxiety Detection Dashboard", page_icon="🧠", layout="wide")
@@ -24,7 +44,7 @@ def load_ai_model():
     if not os.path.exists(model_path):
         raise FileNotFoundError(f"File model tidak ditemukan di: {model_path}")
     loader = keras.models if keras is not None else tf.keras.models
-    return loader.load_model(model_path, compile=False)
+    return loader.load_model(model_path, compile=False, custom_objects=custom_objects)
 
 # Menginisialisasi model
 model = None
