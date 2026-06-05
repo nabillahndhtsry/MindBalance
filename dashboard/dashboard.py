@@ -5,25 +5,46 @@ import seaborn as sns
 import pickle
 import numpy as np
 import tensorflow as tf
+import keras
 import os
 
 # Mengambil path folder tempat script ini dijalankan agar aman di server Linux
+st.set_page_config(page_title="MindBalance - Anxiety Detection", page_icon="🧠", layout="wide")
 current_dir = os.path.dirname(os.path.realpath(__file__))
+model_path = os.path.join(current_dir, "mindbalance_model_new.keras")
 
-# LOAD MODEL TENSORFLOW (AI)
-@st.cache_resource 
+# LOAD MODEL DENGAN ERROR HANDLING
+@st.cache_resource
 def load_ai_model():
-    model_path = os.path.join(current_dir, "mindbalance_model_new.keras")
-    return tf.keras.models.load_model(model_path)
+    # compile=False mencegah Keras mencoba merekonstruksi optimizer/loss 
+    # yang seringkali memicu error modul di environment cloud
+    return keras.models.load_model(model_path, compile=False)
 
+# Menginisialisasi model
+model = None
 try:
     model = load_ai_model()
-    model_loaded = True
 except Exception as e:
-    st.error(f"❌ Gagal memuat model AI: {e}. Pastikan file 'mindbalance_model_new.keras' ada di folder.")
-    model = None
-    model_loaded = False
+    st.error(f"❌ Gagal memuat model: {e}")
 
+st.title("🧠 MindBalance — AI-Powered Anxiety Detection")
+st.markdown("---")
+
+# Simulasi Input (Ganti dengan input user yang sebenarnya)
+# Pastikan bentuk input (shape) sesuai dengan input_layer modelmu [None, 21]
+input_dummy = np.random.rand(1, 21).astype(np.float32)
+
+if model:
+    if st.button("Jalankan Prediksi"):
+        try:
+            # Prediksi
+            prediction = model.predict(input_dummy)
+            st.success("Prediksi berhasil dijalankan!")
+            st.write(f"Output mentah: {prediction}")
+        except Exception as e:
+            st.error(f"Terjadi kesalahan saat prediksi: {e}")
+else:
+    st.warning("Model belum dimuat, silakan periksa file .keras di folder.")
 
 # 1. KONFIGURASI HALAMAN & THEME
 st.set_page_config(
