@@ -3,4 +3,4 @@ pandas
 matplotlib
 seaborn
 numpy==1.26.4
-tensorflow-cpu
+tensorflow==2.15.0
