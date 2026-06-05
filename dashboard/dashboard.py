@@ -5,7 +5,6 @@ import seaborn as sns
 import pickle
 import numpy as np
 import tensorflow as tf
-import keras
 import os
 
 # Mengambil path folder tempat script ini dijalankan agar aman di server Linux
@@ -18,7 +17,7 @@ model_path = os.path.join(current_dir, "mindbalance_model_new.keras")
 def load_ai_model():
     # compile=False mencegah Keras mencoba merekonstruksi optimizer/loss 
     # yang seringkali memicu error modul di environment cloud
-    return keras.models.load_model(model_path, compile=False)
+    return tf.keras.models.load_model(model_path, compile=False)
 
 # Menginisialisasi model
 model = None
